@@ -1055,22 +1055,16 @@ def projects_section():
             "tech": ["MySQL", "SQL", "Data Analysis"]
         },
         {
-            "icon": "🏥",
-            "title": "Healthcare Data Analysis",
-            "description": "End-to-end healthcare data project featuring EDA, SQL insights, Power BI dashboard, and machine learning predictive modeling for patient outcomes.",
-            "tech": ["Python", "SQL", "Power BI", "ML", "Scikit-learn"]
+            "icon": "❤️",
+            "title": "Heart Disease Risk Analysis",
+            "description": "Interactive Power BI dashboard analyzing heart disease risk factors across patient demographics. Identified age cholesterol smoking diabetes and lifestyle patterns to support healthcare.",
+            "tech": ["Python", "Jupyter Notebook", "Power BI", "DAX"]
         },
         {
-            "icon": "📝",
-            "title": "Resume Builder Website",
-            "description": "Dynamic web application enabling users to create professional, ATS-friendly resumes with multiple templates and real-time preview functionality.",
-            "tech": ["Python", "HTML/CSS", "JavaScript"]
-        },
-        {
-            "icon": "🤚",
-            "title": "Handedness & Lifespan Study",
-            "description": "Statistical analysis of lifespan differences between left and right-handed individuals across 10,000+ records, revealing a 9% lifespan disparity.",
-            "tech": ["Python", "Pandas", "Matplotlib", "EDA"]
+            "icon": "🛒",
+            "title": "E-Commerce Sales Analytics",
+            "description": "Comprehensive Power BI dashboard analyzing e-commerce sales profit discounts and customer purchasing trends. Identified top-performing products.",
+            "tech": ["Python", "Jupyter Notebook", "Power BI", "DAX"]
         },
     ]
     
@@ -1090,7 +1084,7 @@ def projects_section():
                        border: 1px solid #00F5FF; border-radius: 25px; color: #00F5FF; font-size: 0.85rem; font-weight: 600;">
                         ⚡ GitHub
                     </a>
-                    <a href="#" style="text-decoration: none; padding: 0.5rem 1rem; background: rgba(124, 58, 237, 0.1); 
+                    <a href="https://app.powerbi.com/groups/me/list?experience=power-bi" style="text-decoration: none; padding: 0.5rem 1rem; background: rgba(124, 58, 237, 0.1); 
                        border: 1px solid #7C3AED; border-radius: 25px; color: #C4B5FD; font-size: 0.85rem; font-weight: 600;">
                         🔗 Live Demo
                     </a>
@@ -1347,9 +1341,6 @@ def resume_section():
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ==================== CONTACT SECTION ====================
-# ==================== CONTACT SECTION (FIXED LAYOUT) ====================
-# Is function ko apne existing contact_section() se completely replace kar do.
-# Yeh form ko wapas right side (bottom section) mein proper position par rakhega.
 
 def contact_section():
     st.markdown('<div id="contact"></div>', unsafe_allow_html=True)
@@ -1509,7 +1500,7 @@ def footer():
 def navigation():
     st.markdown("""
     <div class="navbar">
-        <div class="navbar-logo">⚡ JS.PORTFOLIO</div>
+        <div class="navbar-logo">⚡ JAY's.ANALYTICS</div>
         <div class="navbar-links">
             <a href="#about">About</a>
             <a href="#skills">Skills</a>
