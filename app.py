@@ -682,212 +682,130 @@ def load_css():
         background: linear-gradient(135deg, #00F5FF, #7C3AED);
         border-radius: 10px;
     }
-
-    /* ============ 3D UI ADDITIONS (tilt + depth only) ============ */
-    .glass-card, .project-card, .skill-category, .timeline-card,
-    .achievement-card, .stat-box, .about-card {
-        transform-style: preserve-3d;
-        will-change: transform;
-    }
-
-    .section {
-        perspective: 1400px;
-    }
     </style>
     """, unsafe_allow_html=True)
 
-# ==================== 3D SCROLL-AWARE BACKGROUND ====================
+# ==================== THREE.JS BACKGROUND ====================
 def three_js_background():
-    """
-    Full-page, scroll-reactive 3D background rendered with Three.js.
-    Escapes the Streamlit iframe so it sits fixed behind every section
-    (instead of being confined to the hero) and reacts to page scroll
-    with data-analyst themed 3D objects: a rotating bar chart, a floating
-    trend line, a wireframe "spreadsheet" grid, and two data-globe spheres.
-    """
     components.html("""
     <!DOCTYPE html>
     <html>
     <head>
         <style>
-            html, body { margin: 0; padding: 0; overflow: hidden; background: transparent; }
-            #canvas-container { width: 100%; height: 100%; }
-            canvas { display: block; }
+            body { margin: 0; overflow: hidden; background: transparent; }
+            #canvas-container {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100vh;
+                z-index: -1;
+                pointer-events: none;
+            }
         </style>
     </head>
     <body>
         <div id="canvas-container"></div>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
         <script>
-            // ---- Escape the Streamlit iframe so this canvas becomes a
-            // ---- fixed, full-viewport background layer for the whole page.
-            (function attachFullPage() {
-                try {
-                    const frame = window.frameElement;
-                    if (frame) {
-                        frame.style.position = 'fixed';
-                        frame.style.top = '0';
-                        frame.style.left = '0';
-                        frame.style.width = '100vw';
-                        frame.style.height = '100vh';
-                        frame.style.zIndex = '-1';
-                        frame.style.pointerEvents = 'none';
-                        frame.style.border = 'none';
-                        let el = frame.parentElement;
-                        while (el && el.tagName !== 'BODY') {
-                            el.style.zIndex = el.style.zIndex || 'auto';
-                            el = el.parentElement;
-                        }
-                    }
-                } catch (e) { /* cross-origin fallback: stays as normal block */ }
-            })();
-
             const container = document.getElementById('canvas-container');
             const scene = new THREE.Scene();
-            const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setClearColor(0x000000, 0);
             container.appendChild(renderer.domElement);
-
-            const rootGroup = new THREE.Group();
-            scene.add(rootGroup);
-
-            // ---- Particle field ----
+            
+            // Particles
             const particlesGeometry = new THREE.BufferGeometry();
-            const particlesCount = 2600;
+            const particlesCount = 3000;
             const posArray = new Float32Array(particlesCount * 3);
             const colorArray = new Float32Array(particlesCount * 3);
-            for (let i = 0; i < particlesCount * 3; i++) {
-                posArray[i] = (Math.random() - 0.5) * 18;
+            
+            for(let i = 0; i < particlesCount * 3; i++) {
+                posArray[i] = (Math.random() - 0.5) * 15;
             }
-            for (let i = 0; i < particlesCount; i++) {
-                const c = Math.random();
-                if (c < 0.5) { colorArray[i*3]=0; colorArray[i*3+1]=0.96; colorArray[i*3+2]=1; }
-                else { colorArray[i*3]=0.49; colorArray[i*3+1]=0.23; colorArray[i*3+2]=0.93; }
+            
+            for(let i = 0; i < particlesCount; i++) {
+                const color = Math.random();
+                if (color < 0.5) {
+                    colorArray[i * 3] = 0;
+                    colorArray[i * 3 + 1] = 0.96;
+                    colorArray[i * 3 + 2] = 1;
+                } else {
+                    colorArray[i * 3] = 0.49;
+                    colorArray[i * 3 + 1] = 0.23;
+                    colorArray[i * 3 + 2] = 0.93;
+                }
             }
+            
             particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
             particlesGeometry.setAttribute('color', new THREE.BufferAttribute(colorArray, 3));
+            
             const particlesMaterial = new THREE.PointsMaterial({
-                size: 0.015, vertexColors: true, transparent: true, opacity: 0.75, blending: THREE.AdditiveBlending
+                size: 0.015,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending
             });
+            
             const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
-            rootGroup.add(particlesMesh);
-
-            // ---- Data globes (wireframe icosahedrons) ----
-            const sphere = new THREE.Mesh(
-                new THREE.IcosahedronGeometry(2, 2),
-                new THREE.MeshBasicMaterial({ color: 0x00F5FF, wireframe: true, transparent: true, opacity: 0.18 })
-            );
-            sphere.position.set(4.5, 0.5, -3);
-            rootGroup.add(sphere);
-
-            const sphere2 = new THREE.Mesh(
-                new THREE.IcosahedronGeometry(1.4, 1),
-                new THREE.MeshBasicMaterial({ color: 0x7C3AED, wireframe: true, transparent: true, opacity: 0.18 })
-            );
-            sphere2.position.set(-4.5, -1, -3);
-            rootGroup.add(sphere2);
-
-            // ---- 3D bar chart (data analyst motif) ----
-            const chartGroup = new THREE.Group();
-            chartGroup.position.set(-5.5, -1.6, -4);
-            const barCount = 6;
-            const barMeshes = [];
-            for (let i = 0; i < barCount; i++) {
-                const h = 0.6 + Math.random() * 1.6;
-                const geo = new THREE.BoxGeometry(0.35, h, 0.35);
-                const t = i / (barCount - 1);
-                const color = new THREE.Color().lerpColors(new THREE.Color(0x00F5FF), new THREE.Color(0x7C3AED), t);
-                const mat = new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.55 });
-                const bar = new THREE.Mesh(geo, mat);
-                bar.position.set(i * 0.5 - (barCount * 0.5 * 0.5), h / 2, 0);
-                bar.userData = { baseHeight: h, phase: i * 0.7 };
-                chartGroup.add(bar);
-                barMeshes.push(bar);
-            }
-            rootGroup.add(chartGroup);
-
-            // ---- Floating trend line (line chart motif) ----
-            const linePoints = [];
-            for (let i = 0; i < 10; i++) {
-                linePoints.push(new THREE.Vector3(i * 0.55 - 2.5, Math.sin(i * 0.9) * 0.6, 0));
-            }
-            const lineGeo = new THREE.BufferGeometry().setFromPoints(linePoints);
-            const lineMat = new THREE.LineBasicMaterial({ color: 0x38BDF8, transparent: true, opacity: 0.6 });
-            const trendLine = new THREE.Line(lineGeo, lineMat);
-            trendLine.position.set(2.8, 2.3, -5);
-            rootGroup.add(trendLine);
-
-            // ---- Wireframe "spreadsheet" grid ----
-            const grid = new THREE.GridHelper(6, 10, 0x7C3AED, 0x00F5FF);
-            grid.material.transparent = true;
-            grid.material.opacity = 0.12;
-            grid.position.set(0, -3, -6);
-            rootGroup.add(grid);
-
-            camera.position.z = 6;
-
-            // ---- Mouse parallax ----
-            let mouseX = 0, mouseY = 0;
-            document.addEventListener('mousemove', (e) => {
-                mouseX = (e.clientX / window.innerWidth) * 2 - 1;
-                mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
+            scene.add(particlesMesh);
+            
+            // Wireframe Sphere (Data Globe)
+            const sphereGeometry = new THREE.IcosahedronGeometry(2, 2);
+            const sphereMaterial = new THREE.MeshBasicMaterial({
+                color: 0x00F5FF,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.15
             });
-            try {
-                window.parent.document.addEventListener('mousemove', (e) => {
-                    mouseX = (e.clientX / window.parent.innerWidth) * 2 - 1;
-                    mouseY = -(e.clientY / window.parent.innerHeight) * 2 + 1;
-                });
-            } catch (e) {}
-
-            // ---- Scroll-reactive rotation ----
-            let scrollFraction = 0;
-            function updateScrollFraction() {
-                try {
-                    const doc = window.parent.document.documentElement;
-                    const scrollTop = window.parent.scrollY || doc.scrollTop || 0;
-                    const scrollHeight = Math.max(doc.scrollHeight - window.parent.innerHeight, 1);
-                    scrollFraction = Math.min(Math.max(scrollTop / scrollHeight, 0), 1);
-                } catch (e) { /* cross-origin: no-op, static scene still animates */ }
-            }
-            try { window.parent.addEventListener('scroll', updateScrollFraction, { passive: true }); } catch (e) {}
-            setInterval(updateScrollFraction, 300);
-
-            let t = 0;
+            const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+            sphere.position.set(4, 0, -2);
+            scene.add(sphere);
+            
+            // Second Sphere
+            const sphere2Geometry = new THREE.IcosahedronGeometry(1.5, 1);
+            const sphere2Material = new THREE.MeshBasicMaterial({
+                color: 0x7C3AED,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.15
+            });
+            const sphere2 = new THREE.Mesh(sphere2Geometry, sphere2Material);
+            sphere2.position.set(-4, 1, -2);
+            scene.add(sphere2);
+            
+            camera.position.z = 5;
+            
+            let mouseX = 0, mouseY = 0;
+            document.addEventListener('mousemove', (event) => {
+                mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+                mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+            });
+            
             function animate() {
                 requestAnimationFrame(animate);
-                t += 0.016;
-
-                particlesMesh.rotation.y += 0.0006;
+                
+                particlesMesh.rotation.y += 0.0005;
                 particlesMesh.rotation.x += 0.0002;
-
+                
                 sphere.rotation.x += 0.003;
                 sphere.rotation.y += 0.005;
+                
                 sphere2.rotation.x -= 0.002;
                 sphere2.rotation.y -= 0.003;
-
-                // Scroll drives overall scene rotation + depth for a "3D while scrolling" feel
-                rootGroup.rotation.y = scrollFraction * Math.PI * 0.6 - 0.3;
-                rootGroup.position.z = -scrollFraction * 3;
-                chartGroup.rotation.y = 0.3 + scrollFraction * Math.PI * 0.4;
-                trendLine.position.y = 2.3 + Math.sin(t * 0.6) * 0.2 - scrollFraction * 1.5;
-                grid.rotation.z = scrollFraction * 0.4;
-
-                barMeshes.forEach((bar) => {
-                    const s = 1 + Math.sin(t * 1.2 + bar.userData.phase) * 0.12;
-                    bar.scale.y = s;
-                });
-
-                camera.position.x += (mouseX * 0.6 - camera.position.x) * 0.04;
-                camera.position.y += (mouseY * 0.4 - camera.position.y) * 0.04;
+                
+                camera.position.x += (mouseX * 0.5 - camera.position.x) * 0.05;
+                camera.position.y += (mouseY * 0.5 - camera.position.y) * 0.05;
                 camera.lookAt(scene.position);
-
+                
                 renderer.render(scene, camera);
             }
+            
             animate();
-
+            
             window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth / window.innerHeight;
                 camera.updateProjectionMatrix();
@@ -898,49 +816,7 @@ def three_js_background():
     </html>
     """, height=0)
 
-# ==================== 3D TILT INTERACTION FOR CARDS ====================
-def inject_tilt_effect():
-    """
-    Adds a subtle real-time 3D tilt (perspective rotateX/rotateY) to the
-    existing glass/project/skill/timeline/achievement/stat cards as the
-    mouse moves over them. Purely a visual/3D-UI enhancement — no content,
-    layout, or section changes.
-    """
-    components.html("""
-    <script>
-    (function() {
-        const SELECTORS = '.glass-card, .project-card, .skill-category, .timeline-card, .achievement-card, .stat-box, .about-card';
-        function initTilt() {
-            let doc;
-            try { doc = window.parent.document; } catch (e) { return; }
-            const cards = doc.querySelectorAll(SELECTORS);
-            cards.forEach((card) => {
-                if (card.dataset.tiltInit) return;
-                card.dataset.tiltInit = "true";
-                card.style.transformStyle = 'preserve-3d';
-                card.style.transition = 'transform 0.15s ease-out, box-shadow 0.15s ease-out';
-                card.addEventListener('mousemove', (e) => {
-                    const rect = card.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-                    const cx = rect.width / 2;
-                    const cy = rect.height / 2;
-                    const rotateX = ((y - cy) / cy) * -6;
-                    const rotateY = ((x - cx) / cx) * 6;
-                    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02,1.02,1.02)`;
-                });
-                card.addEventListener('mouseleave', () => {
-                    card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1,1,1)';
-                });
-            });
-        }
-        initTilt();
-        setInterval(initTilt, 1200); // re-attach after Streamlit re-renders
-    })();
-    </script>
-    """, height=0)
-
-# ==================== HERO SECTION ====================
+# ==================== HERO SECTION (UPDATED) ====================
 def hero_section():
     components.html("""
     <!DOCTYPE html>
@@ -950,11 +826,12 @@ def hero_section():
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Orbitron:wght@400;500;600;700;800;900&display=swap');
             * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { background-color: transparent; color: #FFFFFF; font-family: 'Poppins', sans-serif; width: 100vw; height: 100vh; }
+            body { background-color: #050816; color: #FFFFFF; font-family: 'Poppins', sans-serif; overflow: hidden; width: 100vw; height: 100vh; }
             .hero { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 2rem; position: relative; z-index: 1; }
-            .hero-content { position: relative; z-index: 2; perspective: 1200px; }
+            #three-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
+            .hero-content { position: relative; z-index: 2; }
             .greeting { font-family: 'Orbitron', sans-serif; color: #00F5FF; font-size: 1rem; letter-spacing: 6px; text-transform: uppercase; margin-bottom: 1rem; }
-            .name { font-family: 'Orbitron', sans-serif; font-size: clamp(2.5rem, 6vw, 5rem); font-weight: 900; background: linear-gradient(135deg, #00F5FF 0%, #7C3AED 50%, #38BDF8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 1.5rem; line-height: 1.1; filter: drop-shadow(0 0 30px rgba(0, 245, 255, 0.3)); transform-style: preserve-3d; }
+            .name { font-family: 'Orbitron', sans-serif; font-size: clamp(2.5rem, 6vw, 5rem); font-weight: 900; background: linear-gradient(135deg, #00F5FF 0%, #7C3AED 50%, #38BDF8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 1.5rem; line-height: 1.1; filter: drop-shadow(0 0 30px rgba(0, 245, 255, 0.3)); }
             .typed-container { font-size: clamp(1.2rem, 3vw, 2rem); font-weight: 600; margin-bottom: 1.5rem; min-height: 3rem; }
             .typed-text { background: linear-gradient(90deg, #00F5FF, #38BDF8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
             .cursor { display: inline-block; width: 4px; height: 1.5rem; background: #00F5FF; animation: blink 0.8s infinite; margin-left: 4px; vertical-align: middle; }
@@ -976,8 +853,9 @@ def hero_section():
         </style>
     </head>
     <body>
+        <canvas id="three-bg"></canvas>
         <div class="hero">
-            <div class="hero-content" id="hero-tilt">
+            <div class="hero-content">
                 <div class="greeting">// Welcome to my Portfolio</div>
                 <h1 class="name">Jaydeep Rajaram Sutar</h1>
                 <div class="typed-container">
@@ -995,15 +873,22 @@ def hero_section():
                 </div>
             </div>
         </div>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
         <script>
-            // Gentle 3D tilt on the hero block itself, following the cursor
-            const heroTilt = document.getElementById('hero-tilt');
-            document.addEventListener('mousemove', (e) => {
-                const rx = ((e.clientY / window.innerHeight) - 0.5) * -6;
-                const ry = ((e.clientX / window.innerWidth) - 0.5) * 6;
-                heroTilt.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
-            });
-
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('three-bg'), alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x050816, 1);
+            const geometry = new THREE.BufferGeometry();
+            const posArray = new Float32Array(2000 * 3);
+            for(let i=0; i<6000; i++) posArray[i] = (Math.random() - 0.5) * 15;
+            geometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            const particles = new THREE.Points(geometry, new THREE.PointsMaterial({ size: 0.02, color: 0x00F5FF }));
+            scene.add(particles);
+            camera.position.z = 5;
+            function animate() { requestAnimationFrame(animate); particles.rotation.y += 0.001; renderer.render(scene, camera); }
+            animate();
             const titles = ["Data Analyst", "Python Developer", "SQL Specialist"];
             let tIdx = 0, cIdx = 0, isDel = false;
             function type() {
@@ -1632,8 +1517,6 @@ def navigation():
 # ==================== MAIN APP ====================
 def main():
     load_css()
-    three_js_background()   # full-page, scroll-reactive 3D background (data bars, trend line, grid, globes)
-    inject_tilt_effect()    # real-time 3D tilt on cards as you move the mouse
     navigation()
     hero_section()
     about_section()
